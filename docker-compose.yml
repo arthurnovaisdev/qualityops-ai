@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: qualityops-postgres
+    environment:
+      POSTGRES_DB: qualityops
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - qualityops_data:/var/lib/postgresql/data
+
+volumes:
+  qualityops_data:
