@@ -7,6 +7,9 @@ import com.arthurnovaisdev.qualityops.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.UUID;
+
 @Service
 public class UserService {
 
@@ -29,6 +32,30 @@ public class UserService {
                 .passwordHash(passwordEncoder.encode(dto.password()))
                 .role(dto.role())
                 .build();
+
+        user = userRepository.save(user);
+
+        return toResponseDTO(user);
+    }
+
+    public List<UserResponseDTO> findAll() {
+        return userRepository.findAll()
+                .stream()
+                .map(this::toResponseDTO)
+                .toList();
+    }
+
+    public UserResponseDTO findById(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+        return toResponseDTO(user);
+    }
+
+    public UserResponseDTO updateStatus(UUID id, boolean active) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+
+        user.setActive(active);
 
         user = userRepository.save(user);
 
