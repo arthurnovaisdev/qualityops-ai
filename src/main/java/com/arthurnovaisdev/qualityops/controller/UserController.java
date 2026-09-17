@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,9 +39,9 @@ public class UserController {
     }
 
     @PatchMapping("/{id}/active")
-    public ResponseEntity<UserResponseDTO> updateStatus(@PathVariable UUID id, @RequestBody UserStatusDTO dto) {
+    public ResponseEntity<UserResponseDTO> updateStatus(@PathVariable UUID id, @RequestBody UserStatusDTO dto, Authentication authentication) {
         return ResponseEntity.ok(
-                userService.updateStatus(id, dto.active())
+                userService.updateStatus(id, dto.active(), authentication.getName())
         );
     }
 }

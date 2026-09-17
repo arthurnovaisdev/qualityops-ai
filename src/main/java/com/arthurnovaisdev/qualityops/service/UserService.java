@@ -3,6 +3,7 @@ package com.arthurnovaisdev.qualityops.service;
 import com.arthurnovaisdev.qualityops.dto.request.UserRequestDTO;
 import com.arthurnovaisdev.qualityops.dto.response.UserResponseDTO;
 import com.arthurnovaisdev.qualityops.entity.User;
+import com.arthurnovaisdev.qualityops.exception.ResourceNotFoundException;
 import com.arthurnovaisdev.qualityops.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -47,13 +48,17 @@ public class UserService {
 
     public UserResponseDTO findById(UUID id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
         return toResponseDTO(user);
     }
 
-    public UserResponseDTO updateStatus(UUID id, boolean active) {
+    public UserResponseDTO updateStatus(UUID id, boolean active, String authenticatedEmail) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+
+        if (!active && user.getEmail().equalsIgnoreCase(authenticatedEmail)) {
+            throw new IllegalArgumentException("Você não pode desativar sua própria conta.");
+        }
 
         user.setActive(active);
 
