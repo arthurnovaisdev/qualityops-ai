@@ -3,6 +3,7 @@ package com.arthurnovaisdev.qualityops.config;
 import com.arthurnovaisdev.qualityops.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -39,7 +40,16 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/users/**").hasRole("ADMIN")
+
+                        .requestMatchers("/api/users/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/customers/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers("/api/customers/**")
+                        .hasAnyRole("ADMIN", "QUALITY_ANALYST")
+
                         .anyRequest().authenticated()
                 )
 
