@@ -71,6 +71,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/evidences/**")
                         .hasAnyRole("ADMIN", "QUALITY_ANALYST")
 
+                        .requestMatchers("/api/investigations/**")
+                        .hasAnyRole("ADMIN", "QUALITY_ANALYST")
+
                         .anyRequest().authenticated()
                 )
 
