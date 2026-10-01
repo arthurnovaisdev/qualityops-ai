@@ -65,6 +65,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/complaints/**")
                         .hasAnyRole("ADMIN", "QUALITY_ANALYST")
 
+                        .requestMatchers(HttpMethod.DELETE, "/api/evidences/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers("/api/evidences/**")
+                        .hasAnyRole("ADMIN", "QUALITY_ANALYST")
+
                         .anyRequest().authenticated()
                 )
 
