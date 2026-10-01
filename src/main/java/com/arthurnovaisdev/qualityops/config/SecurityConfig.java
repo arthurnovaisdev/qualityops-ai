@@ -62,6 +62,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/lots/**")
                         .hasAnyRole("ADMIN", "QUALITY_ANALYST")
 
+                        .requestMatchers("/api/complaints/**")
+                        .hasAnyRole("ADMIN", "QUALITY_ANALYST")
+
                         .anyRequest().authenticated()
                 )
 
