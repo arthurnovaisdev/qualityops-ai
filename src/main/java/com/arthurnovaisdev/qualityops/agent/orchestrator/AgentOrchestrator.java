@@ -3,6 +3,7 @@ package com.arthurnovaisdev.qualityops.agent.orchestrator;
 import com.arthurnovaisdev.qualityops.agent.prompt.AgentSystemPrompt;
 import com.arthurnovaisdev.qualityops.dto.response.ComplaintContextResponseDTO;
 import com.arthurnovaisdev.qualityops.dto.response.agent.AgentAnalysisResponseDTO;
+import com.arthurnovaisdev.qualityops.dto.response.agent.AgentSuggestionDraftDTO;
 import com.arthurnovaisdev.qualityops.service.AgentAnalysisValidator;
 import com.arthurnovaisdev.qualityops.service.AgentContextService;
 import org.springframework.ai.chat.client.ChatClient;
@@ -87,5 +88,49 @@ public class AgentOrchestrator {
                 analysis,
                 context
         );
+    }
+
+    public AgentSuggestionDraftDTO generateSuggestion(
+            ComplaintContextResponseDTO context,
+            String userMessage
+    ) {
+
+        String contextJson =
+                objectMapper
+                        .valueToTree(context)
+                        .toString();
+
+        String request = """
+            CONTEXTO AUTORITATIVO:
+            %s
+
+            SOLICITAÇÃO:
+            %s
+
+            Gere uma única sugestão de investigação para revisão humana.
+
+            Regras:
+            - Não altere a causa raiz confirmada.
+            - Não repita ações corretivas já concluídas.
+            - Não afirme fatos que não estejam no contexto.
+            - Não diga que uma hipótese está confirmada.
+            - A sugestão deve ser objetiva e ter no máximo 500 caracteres.
+
+            Retorne exclusivamente:
+
+            {
+              "suggestion": "..."
+            }
+            """.formatted(
+                contextJson,
+                userMessage
+        );
+
+        return chatClient
+                .prompt()
+                .system(AgentSystemPrompt.SYSTEM_PROMPT)
+                .user(request)
+                .call()
+                .entity(AgentSuggestionDraftDTO.class);
     }
 }

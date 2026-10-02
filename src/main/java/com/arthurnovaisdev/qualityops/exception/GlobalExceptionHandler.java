@@ -30,4 +30,36 @@ public class GlobalExceptionHandler {
                         "timestamp", LocalDateTime.now()
                 ));
     }
+
+    @ExceptionHandler(AgentSuggestionConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleAgentSuggestionConflict(
+            AgentSuggestionConflictException ex
+    ) {
+
+        Map<String, Object> body = Map.of(
+                "status", 409,
+                "error", "Conflict",
+                "message", ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(body);
+    }
+
+    @ExceptionHandler(AgentGenerationException.class)
+    public ResponseEntity<Map<String, Object>> handleAgentGeneration(
+            AgentGenerationException ex
+    ) {
+
+        Map<String, Object> body = Map.of(
+                "status", 502,
+                "error", "Bad Gateway",
+                "message", ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_GATEWAY)
+                .body(body);
+    }
 }
