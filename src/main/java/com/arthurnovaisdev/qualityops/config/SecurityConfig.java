@@ -77,6 +77,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/corrective-actions/**")
                         .hasAnyRole("ADMIN", "QUALITY_ANALYST")
 
+                        .requestMatchers("/api/agent/**")
+                        .hasAnyRole("ADMIN", "QUALITY_ANALYST")
+
                         .anyRequest().authenticated()
                 )
 

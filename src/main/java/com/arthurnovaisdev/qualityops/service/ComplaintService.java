@@ -197,4 +197,33 @@ public class ComplaintService {
             );
         }
     }
+
+    @Transactional(readOnly = true)
+    public List<ComplaintResponseDTO> searchSimilar(String text) {
+        return complaintRepository
+                .findTop10ByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrderByCreatedAtDesc(
+                        text,
+                        text
+                )
+                .stream()
+                .map(this::toResponseDTO)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ComplaintResponseDTO> searchSimilarByComplaintId(
+            UUID complaintId
+    ) {
+        Complaint complaint = findEntityById(complaintId);
+
+        return complaintRepository
+                .findTop10ByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrderByCreatedAtDesc(
+                        complaint.getTitle(),
+                        complaint.getDescription()
+                )
+                .stream()
+                .filter(result -> !result.getId().equals(complaintId))
+                .map(this::toResponseDTO)
+                .toList();
+    }
 }

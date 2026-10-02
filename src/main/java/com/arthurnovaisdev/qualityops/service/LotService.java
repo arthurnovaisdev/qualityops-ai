@@ -117,4 +117,14 @@ public class LotService {
                 lot.getExpirationDate()
         );
     }
+
+    @Transactional(readOnly = true)
+    public LotResponseDTO findByCode(String code) {
+        Lot lot = lotRepository.findByCode(code)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Lote não encontrado.")
+                );
+
+        return toResponseDTO(lot);
+    }
 }
