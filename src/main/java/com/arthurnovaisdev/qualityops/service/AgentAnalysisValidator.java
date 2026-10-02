@@ -237,6 +237,28 @@ public class AgentAnalysisValidator {
             return true;
         }
 
+        if (context.lot() != null) {
+
+            if (context.lot().manufacturingDate() != null
+                    && containsAny(
+                    text,
+                    "data de fabricacao",
+                    "quando foi fabricada",
+                    "quando foi fabricado"
+            )) {
+                return true;
+            }
+
+            if (context.lot().expirationDate() != null
+                    && containsAny(
+                    text,
+                    "data de validade",
+                    "validade"
+            )) {
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -269,6 +291,12 @@ public class AgentAnalysisValidator {
                         )
                         .filter(step ->
                                 !triesToRediscoverRootCause(
+                                        step,
+                                        context
+                                )
+                        )
+                        .filter(step ->
+                                !requestsAlreadyKnownInformation(
                                         step,
                                         context
                                 )
@@ -542,5 +570,67 @@ public class AgentAnalysisValidator {
 
         return !words.isEmpty()
                 && genericWords.containsAll(words);
+    }
+
+    private boolean requestsAlreadyKnownInformation(
+            String step,
+            ComplaintContextResponseDTO context
+    ) {
+
+        String text = normalize(step);
+
+        if (context.lot() != null) {
+
+            if (context.lot().manufacturingDate() != null
+                    && containsAny(
+                    text,
+                    "data de fabricacao",
+                    "verificar quando foi fabricada",
+                    "verificar quando foi fabricado"
+            )) {
+                return true;
+            }
+
+            if (context.lot().expirationDate() != null
+                    && containsAny(
+                    text,
+                    "data de validade",
+                    "verificar validade"
+            )) {
+                return true;
+            }
+        }
+
+        if (context.complaint() != null) {
+
+            if (context.complaint().customerName() != null
+                    && containsAny(
+                    text,
+                    "identificar cliente",
+                    "verificar cliente"
+            )) {
+                return true;
+            }
+
+            if (context.complaint().productName() != null
+                    && containsAny(
+                    text,
+                    "identificar produto",
+                    "verificar produto"
+            )) {
+                return true;
+            }
+
+            if (context.complaint().lotCode() != null
+                    && containsAny(
+                    text,
+                    "identificar lote",
+                    "verificar lote"
+            )) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -26,6 +26,7 @@ public class AgentContextService {
     private final EvidenceService evidenceService;
     private final InvestigationService investigationService;
     private final CorrectiveActionService correctiveActionService;
+    private final ComplaintVectorService complaintVectorService;
 
     public ComplaintContextResponseDTO getComplaintContext(
             UUID complaintId
@@ -88,7 +89,7 @@ public class AgentContextService {
         }
 
         List<ComplaintResponseDTO> similarComplaints =
-                complaintService.searchSimilarByComplaintId(
+                complaintVectorService.searchSimilarComplaints(
                         complaintId
                 );
 

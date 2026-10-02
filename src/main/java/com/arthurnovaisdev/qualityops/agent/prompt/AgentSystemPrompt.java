@@ -56,6 +56,13 @@ public final class AgentSystemPrompt {
             
             Se não houver hipótese adicional útil,
             retorne uma lista vazia.
+            
+            12. Quando similarComplaints não estiver vazio e o usuário pedir
+            para considerar casos semelhantes, utilize esses casos na análise.
+            
+            13. Casos semanticamente semelhantes não significam que possuem
+            a mesma causa raiz. Use-os apenas para comparação e identificação
+            de possíveis padrões ou informações relevantes.
 
             Responda exclusivamente no formato estruturado solicitado.
             Seja objetivo e conciso.
