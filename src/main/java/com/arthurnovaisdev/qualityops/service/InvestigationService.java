@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -109,6 +110,15 @@ public class InvestigationService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public Optional<InvestigationResponseDTO> findOptionalByComplaint(
+            UUID complaintId
+    ) {
+        return investigationRepository
+                .findByComplaintId(complaintId)
+                .map(this::toResponseDTO);
+    }
+
     private Investigation findEntityById(UUID id) {
         return investigationRepository.findById(id)
                 .orElseThrow(() ->
@@ -116,28 +126,6 @@ public class InvestigationService {
                                 "Investigação não encontrada."
                         )
                 );
-    }
-
-    private InvestigationResponseDTO toResponseDTO(
-            Investigation investigation
-    ) {
-        return new InvestigationResponseDTO(
-                investigation.getId(),
-
-                investigation.getComplaint().getId(),
-                investigation.getComplaint().getTitle(),
-
-                investigation.getAnalysis(),
-                investigation.getRootCause(),
-
-                investigation.getStatus(),
-
-                investigation.getCreatedBy().getId(),
-                investigation.getCreatedBy().getName(),
-
-                investigation.getCreatedAt(),
-                investigation.getUpdatedAt()
-        );
     }
 
     public InvestigationResponseDTO updateStatus(
@@ -186,5 +174,27 @@ public class InvestigationService {
                             + currentStatus + " -> " + newStatus
             );
         }
+    }
+
+    private InvestigationResponseDTO toResponseDTO(
+            Investigation investigation
+    ) {
+        return new InvestigationResponseDTO(
+                investigation.getId(),
+
+                investigation.getComplaint().getId(),
+                investigation.getComplaint().getTitle(),
+
+                investigation.getAnalysis(),
+                investigation.getRootCause(),
+
+                investigation.getStatus(),
+
+                investigation.getCreatedBy().getId(),
+                investigation.getCreatedBy().getName(),
+
+                investigation.getCreatedAt(),
+                investigation.getUpdatedAt()
+        );
     }
 }

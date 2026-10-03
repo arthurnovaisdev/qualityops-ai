@@ -7,13 +7,12 @@ import com.arthurnovaisdev.qualityops.dto.response.InvestigationResponseDTO;
 import com.arthurnovaisdev.qualityops.dto.response.LotResponseDTO;
 import com.arthurnovaisdev.qualityops.dto.response.agent.AgentCorrectiveActionContextDTO;
 import com.arthurnovaisdev.qualityops.dto.response.agent.AgentInvestigationContextDTO;
-import com.arthurnovaisdev.qualityops.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -44,19 +43,24 @@ public class AgentContextService {
         }
 
         List<EvidenceResponseDTO> evidences =
-                evidenceService.findByComplaint(complaintId);
+                evidenceService.findByComplaint(
+                        complaintId
+                );
 
         AgentInvestigationContextDTO investigation = null;
 
         List<AgentCorrectiveActionContextDTO> correctiveActions =
-                Collections.emptyList();
+                List.of();
 
-        try {
+        Optional<InvestigationResponseDTO> investigationOptional =
+                investigationService.findOptionalByComplaint(
+                        complaintId
+                );
+
+        if (investigationOptional.isPresent()) {
 
             InvestigationResponseDTO investigationResponse =
-                    investigationService.findByComplaint(
-                            complaintId
-                    );
+                    investigationOptional.get();
 
             investigation =
                     new AgentInvestigationContextDTO(
@@ -84,8 +88,6 @@ public class AgentContextService {
                                     )
                             )
                             .toList();
-
-        } catch (ResourceNotFoundException ignored) {
         }
 
         List<ComplaintResponseDTO> similarComplaints =

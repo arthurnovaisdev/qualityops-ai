@@ -62,4 +62,36 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.BAD_GATEWAY)
                 .body(body);
     }
+
+    @ExceptionHandler(AgentRateLimitExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleAgentRateLimitExceeded(
+            AgentRateLimitExceededException ex
+    ) {
+
+        Map<String, Object> body = Map.of(
+                "status", 429,
+                "error", "Too Many Requests",
+                "message", ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(body);
+    }
+
+    @ExceptionHandler(AgentSecurityException.class)
+    public ResponseEntity<Map<String, Object>> handleAgentSecurity(
+            AgentSecurityException ex
+    ) {
+
+        Map<String, Object> body = Map.of(
+                "status", 400,
+                "error", "Bad Request",
+                "message", ex.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(body);
+    }
 }
