@@ -5,7 +5,10 @@ import com.arthurnovaisdev.qualityops.dto.request.InvestigationSuggestionRequest
 import com.arthurnovaisdev.qualityops.dto.response.ComplaintContextResponseDTO;
 import com.arthurnovaisdev.qualityops.dto.response.InvestigationSuggestionResponseDTO;
 import com.arthurnovaisdev.qualityops.dto.response.agent.AgentSuggestionDraftDTO;
+import com.arthurnovaisdev.qualityops.enums.AgentExecutionStatus;
+import com.arthurnovaisdev.qualityops.enums.AgentOperationType;
 import com.arthurnovaisdev.qualityops.exception.AgentGenerationException;
+import com.arthurnovaisdev.qualityops.exception.AgentSuggestionConflictException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,60 +23,121 @@ public class AgentSuggestionService {
     private final AgentContextService agentContextService;
     private final AgentSuggestionValidator agentSuggestionValidator;
     private final InvestigationSuggestionService investigationSuggestionService;
+    private final AgentAuditService agentAuditService;
 
     public InvestigationSuggestionResponseDTO createSuggestion(
             UUID complaintId,
             String userMessage
     ) {
 
-        ComplaintContextResponseDTO context =
-                agentContextService.getComplaintContext(
-                        complaintId
+        long start = System.nanoTime();
+
+        String generatedSuggestion = null;
+
+        try {
+
+            ComplaintContextResponseDTO context =
+                    agentContextService.getComplaintContext(
+                            complaintId
+                    );
+
+            AgentSuggestionDraftDTO draft =
+                    agentOrchestrator.generateSuggestion(
+                            context,
+                            userMessage
+                    );
+
+            if (draft == null
+                    || draft.suggestion() == null
+                    || draft.suggestion().isBlank()) {
+
+                throw new AgentGenerationException(
+                        "A IA não gerou uma sugestão válida."
                 );
+            }
 
-        AgentSuggestionDraftDTO draft =
-                agentOrchestrator.generateSuggestion(
-                        context,
-                        userMessage
+            generatedSuggestion =
+                    draft.suggestion().trim();
+
+            if (generatedSuggestion.length() > 500) {
+
+                throw new AgentGenerationException(
+                        "A sugestão gerada ultrapassou o limite permitido."
                 );
+            }
 
-        if (draft == null
-                || draft.suggestion() == null
-                || draft.suggestion().isBlank()) {
+            List<InvestigationSuggestionResponseDTO> existingSuggestions =
+                    investigationSuggestionService.findByComplaint(
+                            complaintId
+                    );
 
-            throw new AgentGenerationException(
-                    "A IA não gerou uma sugestão válida."
+            agentSuggestionValidator.validate(
+                    generatedSuggestion,
+                    context,
+                    existingSuggestions
             );
-        }
 
-        String suggestion =
-                draft.suggestion().trim();
+            InvestigationSuggestionRequestDTO request =
+                    new InvestigationSuggestionRequestDTO(
+                            complaintId,
+                            generatedSuggestion
+                    );
 
-        if (suggestion.length() > 500) {
-            throw new AgentGenerationException(
-                    "A sugestão gerada ultrapassou o limite permitido."
+            InvestigationSuggestionResponseDTO response =
+                    investigationSuggestionService.create(
+                            request
+                    );
+
+            long durationMs =
+                    (System.nanoTime() - start)
+                            / 1_000_000;
+
+            agentAuditService.register(
+                    complaintId,
+                    AgentOperationType.SUGGESTION,
+                    AgentExecutionStatus.SUCCESS,
+                    userMessage,
+                    generatedSuggestion,
+                    durationMs
             );
+
+            return response;
+
+        } catch (AgentSuggestionConflictException ex) {
+
+            long durationMs =
+                    (System.nanoTime() - start)
+                            / 1_000_000;
+
+            agentAuditService.register(
+                    complaintId,
+                    AgentOperationType.SUGGESTION,
+                    AgentExecutionStatus.BLOCKED,
+                    userMessage,
+                    generatedSuggestion != null
+                            ? generatedSuggestion
+                            : ex.getMessage(),
+                    durationMs
+            );
+
+            throw ex;
+
+        } catch (Exception ex) {
+
+            long durationMs =
+                    (System.nanoTime() - start)
+                            / 1_000_000;
+
+            agentAuditService.register(
+                    complaintId,
+                    AgentOperationType.SUGGESTION,
+                    AgentExecutionStatus.FAILED,
+                    userMessage,
+                    ex.getMessage(),
+                    durationMs
+            );
+
+            throw ex;
         }
-
-        List<InvestigationSuggestionResponseDTO> existingSuggestions =
-                investigationSuggestionService.findByComplaint(
-                        complaintId
-                );
-
-        agentSuggestionValidator.validate(
-                suggestion,
-                context,
-                existingSuggestions
-        );
-
-        InvestigationSuggestionRequestDTO request =
-                new InvestigationSuggestionRequestDTO(
-                        complaintId,
-                        suggestion
-                );
-
-        return investigationSuggestionService.create(
-                request
-        );
     }
 }

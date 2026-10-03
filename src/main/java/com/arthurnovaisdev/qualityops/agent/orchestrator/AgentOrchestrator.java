@@ -4,7 +4,10 @@ import com.arthurnovaisdev.qualityops.agent.prompt.AgentSystemPrompt;
 import com.arthurnovaisdev.qualityops.dto.response.ComplaintContextResponseDTO;
 import com.arthurnovaisdev.qualityops.dto.response.agent.AgentAnalysisResponseDTO;
 import com.arthurnovaisdev.qualityops.dto.response.agent.AgentSuggestionDraftDTO;
+import com.arthurnovaisdev.qualityops.enums.AgentExecutionStatus;
+import com.arthurnovaisdev.qualityops.enums.AgentOperationType;
 import com.arthurnovaisdev.qualityops.service.AgentAnalysisValidator;
+import com.arthurnovaisdev.qualityops.service.AgentAuditService;
 import com.arthurnovaisdev.qualityops.service.AgentContextService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Component;
@@ -19,16 +22,19 @@ public class AgentOrchestrator {
     private final AgentContextService agentContextService;
     private final AgentAnalysisValidator agentAnalysisValidator;
     private final ObjectMapper objectMapper;
+    private final AgentAuditService agentAuditService;
 
     public AgentOrchestrator(
             ChatClient.Builder chatClientBuilder,
             AgentContextService agentContextService,
             AgentAnalysisValidator agentAnalysisValidator,
+            AgentAuditService agentAuditService,
             ObjectMapper objectMapper
     ) {
         this.chatClient = chatClientBuilder.build();
         this.agentContextService = agentContextService;
         this.agentAnalysisValidator = agentAnalysisValidator;
+        this.agentAuditService = agentAuditService;
         this.objectMapper = objectMapper;
     }
 
@@ -37,18 +43,21 @@ public class AgentOrchestrator {
             String userMessage
     ) {
 
-        ComplaintContextResponseDTO context =
-                agentContextService
-                        .getComplaintContext(
-                                complaintId
-                        );
+        long start = System.nanoTime();
 
-        String contextJson =
-                objectMapper
-                        .valueToTree(context)
-                        .toString();
+        try {
 
-        String request = """
+            ComplaintContextResponseDTO context =
+                    agentContextService.getComplaintContext(
+                            complaintId
+                    );
+
+            String contextJson =
+                    objectMapper
+                            .valueToTree(context)
+                            .toString();
+
+            String request = """
                 CONTEXTO AUTORITATIVO:
                 %s
 
@@ -68,26 +77,62 @@ public class AgentOrchestrator {
                 Não use Markdown.
                 Não escreva texto fora do JSON.
                 """.formatted(
-                contextJson,
-                userMessage
-        );
+                    contextJson,
+                    userMessage
+            );
 
-        AgentAnalysisResponseDTO analysis =
-                chatClient
-                        .prompt()
-                        .system(
-                                AgentSystemPrompt.SYSTEM_PROMPT
-                        )
-                        .user(request)
-                        .call()
-                        .entity(
-                                AgentAnalysisResponseDTO.class
-                        );
+            AgentAnalysisResponseDTO analysis =
+                    chatClient
+                            .prompt()
+                            .system(
+                                    AgentSystemPrompt.SYSTEM_PROMPT
+                            )
+                            .user(request)
+                            .call()
+                            .entity(
+                                    AgentAnalysisResponseDTO.class
+                            );
 
-        return agentAnalysisValidator.validate(
-                analysis,
-                context
-        );
+            AgentAnalysisResponseDTO validated =
+                    agentAnalysisValidator.validate(
+                            analysis,
+                            context
+                    );
+
+            long durationMs =
+                    (System.nanoTime() - start)
+                            / 1_000_000;
+
+            agentAuditService.register(
+                    complaintId,
+                    AgentOperationType.ANALYSIS,
+                    AgentExecutionStatus.SUCCESS,
+                    userMessage,
+                    objectMapper
+                            .valueToTree(validated)
+                            .toString(),
+                    durationMs
+            );
+
+            return validated;
+
+        } catch (Exception ex) {
+
+            long durationMs =
+                    (System.nanoTime() - start)
+                            / 1_000_000;
+
+            agentAuditService.register(
+                    complaintId,
+                    AgentOperationType.ANALYSIS,
+                    AgentExecutionStatus.FAILED,
+                    userMessage,
+                    ex.getMessage(),
+                    durationMs
+            );
+
+            throw ex;
+        }
     }
 
     public AgentSuggestionDraftDTO generateSuggestion(
