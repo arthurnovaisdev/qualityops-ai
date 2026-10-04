@@ -8,8 +8,4 @@ import java.util.UUID;
 
 public interface ComplaintRepository extends JpaRepository<Complaint, UUID> {
 
-    List<Complaint> findTop10ByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrderByCreatedAtDesc(
-            String title,
-            String description
-    );
 }

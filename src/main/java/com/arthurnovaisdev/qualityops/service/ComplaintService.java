@@ -3,12 +3,14 @@ package com.arthurnovaisdev.qualityops.service;
 import com.arthurnovaisdev.qualityops.dto.request.ComplaintRequestDTO;
 import com.arthurnovaisdev.qualityops.dto.response.ComplaintResponseDTO;
 import com.arthurnovaisdev.qualityops.entity.*;
+import com.arthurnovaisdev.qualityops.event.ComplaintChangedEvent;
 import com.arthurnovaisdev.qualityops.enums.ComplaintStatus;
 import com.arthurnovaisdev.qualityops.exception.ResourceNotFoundException;
 import com.arthurnovaisdev.qualityops.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +25,7 @@ public class ComplaintService {
     private final ProductRepository productRepository;
     private final LotRepository lotRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ComplaintResponseDTO create(
             ComplaintRequestDTO dto,
@@ -34,7 +37,9 @@ public class ComplaintService {
 
         User createdBy = userRepository.findByEmail(authenticatedEmail)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Usuário autenticado não encontrado.")
+                        new ResourceNotFoundException(
+                                "Usuário autenticado não encontrado."
+                        )
                 );
 
         Complaint complaint = Complaint.builder()
@@ -47,7 +52,14 @@ public class ComplaintService {
                 .status(ComplaintStatus.OPEN)
                 .build();
 
-        return toResponseDTO(complaintRepository.save(complaint));
+        Complaint saved =
+                complaintRepository.save(complaint);
+
+        eventPublisher.publishEvent(
+                new ComplaintChangedEvent(saved.getId())
+        );
+
+        return toResponseDTO(saved);
     }
 
     @Transactional(readOnly = true)
@@ -196,34 +208,5 @@ public class ComplaintService {
                             + currentStatus + " -> " + newStatus
             );
         }
-    }
-
-    @Transactional(readOnly = true)
-    public List<ComplaintResponseDTO> searchSimilar(String text) {
-        return complaintRepository
-                .findTop10ByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrderByCreatedAtDesc(
-                        text,
-                        text
-                )
-                .stream()
-                .map(this::toResponseDTO)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<ComplaintResponseDTO> searchSimilarByComplaintId(
-            UUID complaintId
-    ) {
-        Complaint complaint = findEntityById(complaintId);
-
-        return complaintRepository
-                .findTop10ByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrderByCreatedAtDesc(
-                        complaint.getTitle(),
-                        complaint.getDescription()
-                )
-                .stream()
-                .filter(result -> !result.getId().equals(complaintId))
-                .map(this::toResponseDTO)
-                .toList();
     }
 }

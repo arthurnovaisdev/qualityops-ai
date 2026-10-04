@@ -2,7 +2,9 @@ package com.arthurnovaisdev.qualityops.service;
 
 import com.arthurnovaisdev.qualityops.dto.response.ComplaintContextResponseDTO;
 import com.arthurnovaisdev.qualityops.dto.response.agent.AgentAnalysisResponseDTO;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -12,7 +14,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class AgentAnalysisValidator {
+
+    private final ObjectMapper objectMapper;
 
     private static final Set<String> STOP_WORDS = Set.of(
             "possivel",
@@ -96,27 +101,40 @@ public class AgentAnalysisValidator {
             ComplaintContextResponseDTO context
     ) {
 
-        if (context.investigation() == null
-                || context.investigation().confirmedRootCause() == null) {
+        String rootCause = null;
 
-            return unique(hypotheses);
+        if (context.investigation() != null) {
+            rootCause =
+                    context.investigation()
+                            .confirmedRootCause();
         }
 
-        String rootCause =
-                context.investigation()
-                        .confirmedRootCause();
+        String finalRootCause = rootCause;
 
         return unique(
                 hypotheses.stream()
+
                         .filter(hypothesis ->
-                                !isGenericHypothesis(hypothesis)
-                        )
-                        .filter(hypothesis ->
-                                !similar(
-                                        hypothesis,
-                                        rootCause
+                                !isGenericHypothesis(
+                                        hypothesis
                                 )
                         )
+
+                        .filter(hypothesis ->
+                                !hasUnsupportedAssumption(
+                                        hypothesis,
+                                        context
+                                )
+                        )
+
+                        .filter(hypothesis ->
+                                finalRootCause == null
+                                        || !similar(
+                                        hypothesis,
+                                        finalRootCause
+                                )
+                        )
+
                         .toList()
         );
     }
@@ -128,12 +146,21 @@ public class AgentAnalysisValidator {
 
         return unique(
                 items.stream()
+
                         .filter(item ->
                                 !informationAlreadyKnown(
                                         item,
                                         context
                                 )
                         )
+
+                        .filter(item ->
+                                !hasUnsupportedAssumption(
+                                        item,
+                                        context
+                                )
+                        )
+
                         .toList()
         );
     }
@@ -146,8 +173,10 @@ public class AgentAnalysisValidator {
         String text = normalize(item);
 
         if (context.investigation() != null
-                && context.investigation().confirmedRootCause() != null
+                && context.investigation()
+                .confirmedRootCause() != null
                 && text.contains("causa raiz")) {
+
             return true;
         }
 
@@ -156,23 +185,41 @@ public class AgentAnalysisValidator {
             if (context.complaint().customerName() != null
                     && text.contains("cliente")
                     && containsGenericInformationRequest(text)) {
+
                 return true;
             }
 
             if (context.complaint().productName() != null
                     && text.contains("produto")
                     && containsGenericInformationRequest(text)) {
+
+                return true;
+            }
+
+            if (context.complaint().productName() != null
+                    && containsAny(
+                    text,
+                    "tipo de peca",
+                    "tipo da peca",
+                    "tipo de produto",
+                    "nome do produto",
+                    "qual produto",
+                    "qual peca"
+            )) {
+
                 return true;
             }
 
             if (context.complaint().lotCode() != null
                     && text.contains("lote")
                     && containsGenericInformationRequest(text)) {
+
                 return true;
             }
 
             if (context.complaint().status() != null
                     && text.contains("status")) {
+
                 return true;
             }
         }
@@ -187,6 +234,7 @@ public class AgentAnalysisValidator {
                     "medida corretiva",
                     "medidas corretivas"
             )) {
+
                 return true;
             }
 
@@ -196,6 +244,7 @@ public class AgentAnalysisValidator {
                     .anyMatch(action ->
                             action.responsibleName() != null
                     )) {
+
                 return true;
             }
 
@@ -209,6 +258,7 @@ public class AgentAnalysisValidator {
                     .anyMatch(action ->
                             action.deadline() != null
                     )) {
+
                 return true;
             }
 
@@ -223,6 +273,7 @@ public class AgentAnalysisValidator {
                     .anyMatch(action ->
                             action.actualCompletionDate() != null
                     )) {
+
                 return true;
             }
         }
@@ -234,6 +285,7 @@ public class AgentAnalysisValidator {
                 "nao ha evidencias",
                 "sem evidencias"
         )) {
+
             return true;
         }
 
@@ -246,6 +298,7 @@ public class AgentAnalysisValidator {
                     "quando foi fabricada",
                     "quando foi fabricado"
             )) {
+
                 return true;
             }
 
@@ -255,6 +308,7 @@ public class AgentAnalysisValidator {
                     "data de validade",
                     "validade"
             )) {
+
                 return true;
             }
         }
@@ -283,24 +337,35 @@ public class AgentAnalysisValidator {
 
         return unique(
                 steps.stream()
+
                         .filter(step ->
                                 !repeatsCompletedAction(
                                         step,
                                         context
                                 )
                         )
+
                         .filter(step ->
                                 !triesToRediscoverRootCause(
                                         step,
                                         context
                                 )
                         )
+
                         .filter(step ->
                                 !requestsAlreadyKnownInformation(
                                         step,
                                         context
                                 )
                         )
+
+                        .filter(step ->
+                                !hasUnsupportedAssumption(
+                                        step,
+                                        context
+                                )
+                        )
+
                         .filter(step ->
                                 !unnecessarilyReopensClosedCase(
                                         step,
@@ -308,6 +373,7 @@ public class AgentAnalysisValidator {
                                         completedInvestigation
                                 )
                         )
+
                         .toList()
         );
     }
@@ -340,7 +406,9 @@ public class AgentAnalysisValidator {
     ) {
 
         if (context.investigation() == null
-                || context.investigation().confirmedRootCause() == null) {
+                || context.investigation()
+                .confirmedRootCause() == null) {
+
             return false;
         }
 
@@ -364,6 +432,7 @@ public class AgentAnalysisValidator {
 
         if (!closedComplaint
                 || !completedInvestigation) {
+
             return false;
         }
 
@@ -409,6 +478,7 @@ public class AgentAnalysisValidator {
 
         if (firstNormalized.contains(secondNormalized)
                 || secondNormalized.contains(firstNormalized)) {
+
             return true;
         }
 
@@ -420,6 +490,7 @@ public class AgentAnalysisValidator {
 
         if (firstWords.isEmpty()
                 || secondWords.isEmpty()) {
+
             return false;
         }
 
@@ -468,6 +539,7 @@ public class AgentAnalysisValidator {
 
             if (item == null
                     || item.isBlank()) {
+
                 continue;
             }
 
@@ -481,7 +553,9 @@ public class AgentAnalysisValidator {
                             );
 
             if (!duplicate) {
-                result.add(item.trim());
+                result.add(
+                        item.trim()
+                );
             }
         }
 
@@ -554,7 +628,9 @@ public class AgentAnalysisValidator {
                 .trim();
     }
 
-    private boolean isGenericHypothesis(String hypothesis) {
+    private boolean isGenericHypothesis(
+            String hypothesis
+    ) {
 
         Set<String> words =
                 keywords(
@@ -563,9 +639,12 @@ public class AgentAnalysisValidator {
 
         Set<String> genericWords = Set.of(
                 "trinca",
+                "fissura",
                 "produto",
                 "processo",
-                "fabricacao"
+                "fabricacao",
+                "producao",
+                "problema"
         );
 
         return !words.isEmpty()
@@ -588,6 +667,7 @@ public class AgentAnalysisValidator {
                     "verificar quando foi fabricada",
                     "verificar quando foi fabricado"
             )) {
+
                 return true;
             }
 
@@ -597,6 +677,7 @@ public class AgentAnalysisValidator {
                     "data de validade",
                     "verificar validade"
             )) {
+
                 return true;
             }
         }
@@ -609,6 +690,7 @@ public class AgentAnalysisValidator {
                     "identificar cliente",
                     "verificar cliente"
             )) {
+
                 return true;
             }
 
@@ -616,8 +698,15 @@ public class AgentAnalysisValidator {
                     && containsAny(
                     text,
                     "identificar produto",
-                    "verificar produto"
+                    "verificar produto",
+                    "verificar tipo de peca",
+                    "identificar tipo de peca",
+                    "verificar tipo de produto",
+                    "identificar tipo de produto",
+                    "verificar qual peca",
+                    "verificar qual produto"
             )) {
+
                 return true;
             }
 
@@ -627,10 +716,44 @@ public class AgentAnalysisValidator {
                     "identificar lote",
                     "verificar lote"
             )) {
+
                 return true;
             }
         }
 
         return false;
+    }
+
+    private boolean hasUnsupportedAssumption(
+            String value,
+            ComplaintContextResponseDTO context
+    ) {
+
+        String valueText =
+                normalize(value);
+
+        String contextText =
+                normalize(
+                        objectMapper
+                                .valueToTree(context)
+                                .toString()
+                );
+
+        Set<String> assumptionTerms = Set.of(
+                "equipamento",
+                "maquina",
+                "sensor",
+                "sistema",
+                "treinamento",
+                "manutencao",
+                "operador",
+                "calibracao"
+        );
+
+        return assumptionTerms.stream()
+                .anyMatch(term ->
+                        valueText.contains(term)
+                                && !contextText.contains(term)
+                );
     }
 }

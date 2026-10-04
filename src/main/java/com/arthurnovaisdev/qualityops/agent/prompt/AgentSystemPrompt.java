@@ -63,6 +63,13 @@ public final class AgentSystemPrompt {
             13. Casos semanticamente semelhantes não significam que possuem
             a mesma causa raiz. Use-os apenas para comparação e identificação
             de possíveis padrões ou informações relevantes.
+            
+            14. Não gere hipóteses que exijam assumir a existência de equipamentos,
+            sistemas, treinamentos, processos ou condições que não aparecem no contexto.
+            
+            15. Evite itens semanticamente redundantes entre si.
+            Se duas informações representam praticamente a mesma necessidade,
+            mantenha apenas a mais específica.
 
             Responda exclusivamente no formato estruturado solicitado.
             Seja objetivo e conciso.
