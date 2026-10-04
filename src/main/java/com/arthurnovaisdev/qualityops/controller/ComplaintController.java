@@ -4,6 +4,7 @@ import com.arthurnovaisdev.qualityops.dto.request.ComplaintRequestDTO;
 import com.arthurnovaisdev.qualityops.dto.response.ComplaintResponseDTO;
 import com.arthurnovaisdev.qualityops.dto.request.ComplaintStatusRequestDTO;
 import com.arthurnovaisdev.qualityops.service.ComplaintService;
+import com.arthurnovaisdev.qualityops.service.ComplaintVectorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import java.util.UUID;
 public class ComplaintController {
 
     private final ComplaintService complaintService;
+    private final ComplaintVectorService complaintVectorService;
 
     @PostMapping
     public ResponseEntity<ComplaintResponseDTO> create(
@@ -48,6 +50,17 @@ public class ComplaintController {
     ) {
         return ResponseEntity.ok(
                 complaintService.findById(id)
+        );
+    }
+
+    @GetMapping("/{id}/similar")
+    public ResponseEntity<List<ComplaintResponseDTO>> findSimilar(
+            @PathVariable UUID id
+    ) {
+
+        return ResponseEntity.ok(
+                complaintVectorService
+                        .searchSimilarComplaints(id)
         );
     }
 

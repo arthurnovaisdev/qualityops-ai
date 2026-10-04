@@ -12,4 +12,6 @@ public interface AgentExecutionRepository
     List<AgentExecution> findByComplaintIdOrderByCreatedAtDesc(
             UUID complaintId
     );
+
+    List<AgentExecution> findTop100ByOrderByCreatedAtDesc();
 }

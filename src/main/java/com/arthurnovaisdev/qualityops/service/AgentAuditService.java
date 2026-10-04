@@ -1,5 +1,6 @@
 package com.arthurnovaisdev.qualityops.service;
 
+import com.arthurnovaisdev.qualityops.dto.response.agent.AgentExecutionResponseDTO;
 import com.arthurnovaisdev.qualityops.entity.AgentExecution;
 import com.arthurnovaisdev.qualityops.entity.Complaint;
 import com.arthurnovaisdev.qualityops.entity.User;
@@ -8,11 +9,14 @@ import com.arthurnovaisdev.qualityops.enums.AgentOperationType;
 import com.arthurnovaisdev.qualityops.repository.AgentExecutionRepository;
 import com.arthurnovaisdev.qualityops.repository.ComplaintRepository;
 import com.arthurnovaisdev.qualityops.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -61,5 +65,34 @@ public class AgentAuditService {
                         .build();
 
         agentExecutionRepository.save(execution);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AgentExecutionResponseDTO> findRecent() {
+
+        return agentExecutionRepository
+                .findTop100ByOrderByCreatedAtDesc()
+                .stream()
+                .map(execution ->
+                        new AgentExecutionResponseDTO(
+                                execution.getId(),
+
+                                execution.getComplaint().getId(),
+                                execution.getComplaint().getTitle(),
+
+                                execution.getRequestedBy().getId(),
+                                execution.getRequestedBy().getName(),
+
+                                execution.getOperation().name(),
+                                execution.getStatus().name(),
+
+                                execution.getUserMessage(),
+                                execution.getOutput(),
+                                execution.getModel(),
+                                execution.getDurationMs(),
+                                execution.getCreatedAt()
+                        )
+                )
+                .toList();
     }
 }

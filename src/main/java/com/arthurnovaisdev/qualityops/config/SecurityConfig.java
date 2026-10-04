@@ -39,9 +39,18 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/csrf"
+                        ).permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/auth/me")
+                        .authenticated()
 
                         .requestMatchers("/api/admin/vector/**")
+                        .hasRole("ADMIN")
+
+                        .requestMatchers("/api/admin/agent-executions/**")
                         .hasRole("ADMIN")
 
                         .requestMatchers("/api/users/**")
@@ -63,6 +72,12 @@ public class SecurityConfig {
                         .hasRole("ADMIN")
 
                         .requestMatchers("/api/lots/**")
+                        .hasAnyRole("ADMIN", "QUALITY_ANALYST")
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/complaints/*/similar"
+                        )
                         .hasAnyRole("ADMIN", "QUALITY_ANALYST")
 
                         .requestMatchers("/api/complaints/**")

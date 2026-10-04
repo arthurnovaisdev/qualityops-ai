@@ -1,7 +1,11 @@
 package com.arthurnovaisdev.qualityops.controller;
 
 import com.arthurnovaisdev.qualityops.dto.request.LoginRequestDTO;
+import com.arthurnovaisdev.qualityops.dto.response.AuthMeResponseDTO;
 import com.arthurnovaisdev.qualityops.dto.response.LoginResponseDTO;
+import com.arthurnovaisdev.qualityops.entity.User;
+import com.arthurnovaisdev.qualityops.exception.ResourceNotFoundException;
+import com.arthurnovaisdev.qualityops.repository.UserRepository;
 import com.arthurnovaisdev.qualityops.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +14,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 import java.util.Map;
 
@@ -19,6 +24,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserRepository userRepository;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO dto) {
@@ -59,5 +65,29 @@ public class AuthController {
         return ResponseEntity.ok(Map.of(
                 "token", csrfToken.getToken()
         ));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<AuthMeResponseDTO> me(
+            Authentication authentication
+    ) {
+
+        User user = userRepository
+                .findByEmail(authentication.getName())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Usuário autenticado não encontrado."
+                        )
+                );
+
+        return ResponseEntity.ok(
+                new AuthMeResponseDTO(
+                        user.getId(),
+                        user.getName(),
+                        user.getEmail(),
+                        user.getRole().name(),
+                        user.isActive()
+                )
+        );
     }
 }
